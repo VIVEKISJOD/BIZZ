@@ -26,7 +26,7 @@ input[type=checkbox]{width:22px;height:22px;accent-color:var(--ac)}
 .ddl{display:none;position:absolute;left:0;right:0;top:100%;z-index:4;background:var(--cd);border:1px solid var(--ln);border-radius:10px;margin-top:4px;max-height:240px;overflow:auto;box-shadow:0 8px 24px #0003}
 .ddl.on{display:block}.opt{display:flex;gap:8px;align-items:center;padding:11px 12px;border-bottom:1px solid var(--ln);cursor:pointer}.opt small{margin-left:auto;color:var(--mu)}
 .dot{width:12px;height:12px;border-radius:50%;background:var(--ok);flex:none}.dot.r{background:var(--no)}
-.it{display:grid;grid-template-columns:1fr 48px 64px 64px 28px;gap:6px;margin-bottom:6px}.it input{padding:9px 6px}
+.it{display:grid;grid-template-columns:1fr 48px 64px 64px 28px;gap:6px;margin-bottom:6px}.it input{padding:9px 6px}.pr{display:grid;grid-template-columns:1fr 64px 72px 28px;gap:6px;margin-bottom:6px}.pr input{padding:9px 6px}
 .tot{font-size:13px}.tot div{display:flex;justify-content:space-between;padding:3px 0}.tot .b{font-size:18px;font-weight:700;color:var(--ac);border-top:1px solid var(--ln);margin-top:4px;padding-top:8px}
 .tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--ln)}.tag.ok{color:var(--ok)}.tag.no{color:var(--no)}
 .mu{color:var(--mu);font-size:13px}.empty{text-align:center;color:var(--mu);padding:30px 10px}
@@ -47,7 +47,7 @@ nav button.on{color:var(--ac);font-weight:700}
 <input type="file" id="file" accept=".json" hidden>
 <script>
 const K='bizz.v2',ACC=['#4f46e5','#0ea5e9','#16a34a','#f59e0b','#e11d48','#9333ea','#0d9488','#475569'];
-const def={s:{user:'User',shop:'My Shop',upi:'',mode:'light',ac:ACC[0]},outs:[],orders:[]};
+const def={s:{user:'User',shop:'My Shop',upi:'',mode:'light',ac:ACC[0]},outs:[],info:{},orders:[]};
 let db;try{db={...def,...JSON.parse(localStorage.getItem(K)||'{}')};db.s={...def.s,...db.s}}catch{db=structuredClone(def)}
 const save=()=>localStorage.setItem(K,JSON.stringify(db)),$=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -57,14 +57,16 @@ const fd=s=>s?new Date(s+'T00:00').toLocaleDateString('en-IN',{day:'numeric',mon
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2000)};
 const sub=o=>o.items.reduce((a,i)=>a+(+i.q||0)*(+i.r||0),0),tot=o=>sub(o)-(+o.disc||0),adv=o=>o.advOn?+o.adv||0:0,bal=o=>tot(o)-adv(o);
 const blank=()=>({cust:'',phone:'',from:'',out:'',date:today(),del:'',items:[{d:'',q:1,u:'pcs',r:''}],disc:'',advOn:false,adv:'',mode:'Cash',note:'',status:'Pending'});
-let sumSel=null,tab='today',draft=blank(),editId=null,flt='Pending',q='';
+let osel=null,sumSel=null,tab='today',draft=blank(),editId=null,flt='Pending',q='';
 const TABS=[['today','📅','Today'],['bill','🧾','New Bill'],['orders','📦','Orders'],['out','🧑‍🔧','Outsource'],['sum','📊','Summary']];
+const oi=n=>db.info[n]||{addr:'',phone:'',prices:[]},oe=n=>db.info[n]||(db.info[n]={addr:'',phone:'',prices:[]});
+const ratesHint=()=>{const p=oi(draft.out).prices.filter(x=>x.n);return `<div class="mu" id="rates" style="margin-top:8px">${p.length?'Their rates: '+p.map(x=>esc(x.n)+' '+inr(x.r)+'/'+(x.u||'pcs')).join(' · '):''}</div>`};
 const used=(n,d)=>db.orders.filter(o=>o.out===n&&o.date===d&&o.id!==editId).length;
 
 function theme(){const dark=db.s.mode==='dark'||(db.s.mode==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);
 document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.setProperty('--ac',db.s.ac);
 document.querySelector('meta[name=theme-color]').content=db.s.ac;$('#user').textContent='👤 '+db.s.user}
-function nav(){$('#nav').innerHTML=TABS.map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><span>${i}</span>${l}</button>`).join('')}
+function nav(){$('#nav').innerHTML=TABS.map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k||(tab==='odet'&&k==='out')?'on':''}"><span>${i}</span>${l}</button>`).join('')}
 
 function card(o,showDel=true){const late=o.status==='Pending'&&o.del&&o.del<today();
 return `<div class="card"><div class="row sp"><b>#${o.no} ${esc(o.cust||'No name')}</b><span class="tag ${o.status==='Delivered'?'ok':late?'no':''}">${late?'Overdue':o.status}</span></div>
@@ -84,7 +86,7 @@ function vBill(){const d=draft;return `<h2>${editId?'Edit bill':'New bill'}</h2>
 <label>Phone</label><input name="phone" inputmode="tel" value="${esc(d.phone)}">
 <label>Business order taken from</label><input name="from" list="froms" value="${esc(d.from)}" placeholder="Shop / agent / source"><datalist id="froms">${[...new Set(db.orders.map(o=>o.from).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
 <div class="row"><div><label>Order given date</label><input type="date" name="date" value="${d.date}"></div><div><label>Delivery date</label><input type="date" name="del" value="${d.del}"></div></div>
-<label>Given to outsource</label><div class="dd"><button type="button" class="ddb" id="ddb" data-a="ddt">${outBtn()}</button><div class="ddl" id="ddl">${outList()}</div></div></div>
+<label>Given to outsource</label><div class="dd"><button type="button" class="ddb" id="ddb" data-a="ddt">${outBtn()}</button><div class="ddl" id="ddl">${outList()}</div></div>${ratesHint()}</div>
 <div class="card"><b>Items</b><div id="items" style="margin-top:8px">${items()}</div><button class="btn g s" data-a="iadd">+ Add item</button>
 <label>Discount (₹)</label><input name="disc" type="number" inputmode="decimal" value="${d.disc}">
 <label class="row" style="margin-top:12px;color:var(--tx);font-size:15px"><input type="checkbox" name="advOn" style="flex:none;width:22px" ${d.advOn?'checked':''}><span>Advance taken</span></label>
@@ -94,15 +96,18 @@ function vBill(){const d=draft;return `<h2>${editId?'Edit bill':'New bill'}</h2>
 <div class="card tot" id="tot"></div>
 <div class="row"><button class="btn" data-a="save">Save bill</button><button class="btn g" data-a="savewa">Save & share</button></div>
 <div class="row" style="margin-top:8px"><button class="btn g" data-a="clear">Clear</button></div>`}
-const items=()=>draft.items.map((i,n)=>`<div class="it"><input data-i="${n}" data-k="d" placeholder="Item" value="${esc(i.d)}"><input data-i="${n}" data-k="q" type="number" inputmode="decimal" placeholder="Qty" value="${i.q}"><select data-i="${n}" data-k="u" style="padding:9px 2px">${['pcs','kg','set'].map(u=>`<option ${u===(i.u||'pcs')?'selected':''}>${u}</option>`).join('')}</select><input data-i="${n}" data-k="r" type="number" inputmode="decimal" placeholder="Rate" value="${i.r}"><button class="btn r s" data-a="idel" data-i="${n}">×</button></div>`).join('');
+const items=()=>`<datalist id="pl">${oi(draft.out).prices.map(p=>`<option value="${esc(p.n)}">`).join('')}</datalist>`+draft.items.map((i,n)=>`<div class="it"><input data-i="${n}" data-k="d" list="pl" placeholder="Item" value="${esc(i.d)}"><input data-i="${n}" data-k="q" type="number" inputmode="decimal" placeholder="Qty" value="${i.q}"><select data-i="${n}" data-k="u" style="padding:9px 2px">${['pcs','kg','set'].map(u=>`<option ${u===(i.u||'pcs')?'selected':''}>${u}</option>`).join('')}</select><input data-i="${n}" data-k="r" type="number" inputmode="decimal" placeholder="Rate" value="${i.r}"><button class="btn r s" data-a="idel" data-i="${n}">×</button></div>`).join('');
 function calc(){const t=$('#tot');if(!t)return;const d=draft;t.innerHTML=`<div><span>Subtotal</span><span>${inr(sub(d))}</span></div>${+d.disc?`<div><span>Discount</span><span>− ${inr(d.disc)}</span></div>`:''}<div><span>Total</span><span>${inr(tot(d))}</span></div>${adv(d)?`<div><span>Advance taken</span><span>− ${inr(adv(d))}</span></div>`:''}<div class="b"><span>Balance to collect</span><span>${inr(bal(d))}</span></div>`}
 
 function vOrders(){let l=db.orders.slice().reverse();if(flt!=='All')l=l.filter(o=>o.status===flt);if(q)l=l.filter(o=>(o.cust+o.out+o.from+o.no).toLowerCase().includes(q.toLowerCase()));
 return `<h2>Orders</h2><input id="q" placeholder="Search customer, outsource, #" value="${esc(q)}" style="margin-bottom:10px"><div class="chips">${['Pending','Delivered','All'].map(f=>`<button class="chip ${flt===f?'on':''}" data-a="flt" data-v="${f}">${f}</button>`).join('')}</div><div id="ol">${l.length?l.map(o=>card(o)).join(''):'<div class="empty">No orders yet</div>'}</div>`}
 
 function vOut(){const t=today();return `<h2>Outsource list</h2><div class="card row"><input id="on" placeholder="Name" style="flex:2"><button class="btn" data-a="oadd2">Add</button></div>
-${db.outs.length?db.outs.map(n=>{const c=used(n,t),p=db.orders.filter(o=>o.out===n&&o.status==='Pending').length;return `<div class="card row sp"><span style="flex:3"><i class="dot ${c?'r':''}" style="display:inline-block;margin-right:8px"></i><b>${esc(n)}</b><br><span class="mu">${c?'Given '+c+' today':'Free today'} · ${p} pending</span></span><button class="btn r s" data-a="odel" data-v="${esc(n)}">Remove</button></div>`}).join(''):'<div class="empty">Add the people you give work to</div>'}`}
+${db.outs.length?db.outs.map(n=>{const c=used(n,t),p=db.orders.filter(o=>o.out===n&&o.status==='Pending').length;return `<div class="card row sp"><span style="flex:3"><i class="dot ${c?'r':''}" style="display:inline-block;margin-right:8px"></i><b>${esc(n)}</b><br><span class="mu">${c?'Given '+c+' today':'Free today'} · ${p} pending</span>${oi(n).addr?'<br><span class="mu">📍 '+esc(oi(n).addr)+'</span>':''}</span><span style="flex:none;display:flex;flex-direction:column;gap:6px"><button class="btn s" data-a="odet" data-v="${esc(n)}">Details</button><button class="btn r s" data-a="odel" data-v="${esc(n)}">Remove</button></span></div>`}).join(''):'<div class="empty">Add the people you give work to</div>'}`}
 
+function vOD(){const n=osel,o=oi(n);return `<div class="row" style="margin-bottom:8px"><button class="btn g s" data-a="oback" style="flex:none">← Back</button><h2 style="margin:0">${esc(n)}</h2></div>
+<div class="card"><label>Address</label><textarea data-o="addr" rows="2">${esc(o.addr)}</textarea><label>Phone</label><input data-o="phone" inputmode="tel" value="${esc(o.phone)}"></div>
+<div class="card"><b>Price list</b><div class="mu">What they charge you per unit</div><div style="margin-top:8px">${o.prices.map((p,i)=>`<div class="pr"><input data-p="${i}" data-k="n" placeholder="Item" value="${esc(p.n)}"><select data-p="${i}" data-k="u" style="padding:9px 2px">${['pcs','kg','set'].map(u=>`<option ${u===(p.u||'pcs')?'selected':''}>${u}</option>`).join('')}</select><input data-p="${i}" data-k="r" type="number" inputmode="decimal" placeholder="₹" value="${p.r}"><button class="btn r s" data-a="pdel" data-i="${i}">×</button></div>`).join('')}</div><button class="btn g s" data-a="padd">+ Add item price</button></div>`}
 function vSum(){const t=today(),m=t.slice(0,7),F={today:o=>o.date===t,month:o=>o.date.startsWith(m),all:o=>o.status==='Pending'},N={today:'Today',month:'This month',all:'All pending'},
 sm=f=>{const l=db.orders.filter(f);return {n:l.length,t:l.reduce((a,o)=>a+tot(o),0),a:l.reduce((a,o)=>a+adv(o),0),b:l.reduce((a,o)=>a+(o.status==='Delivered'?0:bal(o)),0)}},
 box=k=>{const s=sm(F[k]);return `<h3>${N[k]}</h3><div class="stat"><div class="card">Orders<b>${s.n}</b></div><div class="card">Billed<b>${inr(s.t)}</b></div><div class="card">Advance<b>${inr(s.a)}</b></div><div class="card" data-a="sl" data-v="${k}" style="cursor:pointer;border-color:var(--ac)">To collect ▸<b>${inr(s.b)}</b></div></div>`},
@@ -113,7 +118,7 @@ function vSet(){const s=db.s;return `<h2>Settings</h2><div class="card"><label>Y
 <div class="card"><b>Theme</b><div class="chips" style="margin-top:8px">${['light','dark','auto'].map(m=>`<button class="chip ${s.mode===m?'on':''}" data-a="mode" data-v="${m}">${m}</button>`).join('')}</div><b>Colour</b><div class="sw" style="margin-top:8px">${ACC.map(c=>`<button data-a="acc" data-v="${c}" class="${s.ac===c?'on':''}" style="background:${c}"></button>`).join('')}</div></div>
 <div class="card"><b>Backup</b><div class="row" style="margin-top:8px"><button class="btn g" data-a="exp">Export</button><button class="btn g" data-a="imp">Import</button></div><button class="btn r" style="width:100%;margin-top:10px" data-a="wipe">Erase all data</button></div>`}
 
-function render(){theme();nav();const v={today:vToday,bill:vBill,orders:vOrders,out:vOut,sum:vSum,settings:vSet}[tab];$('#view').innerHTML=v();if(tab==='bill')calc()}
+function render(){theme();nav();const v={today:vToday,bill:vBill,orders:vOrders,out:vOut,odet:vOD,sum:vSum,settings:vSet}[tab];$('#view').innerHTML=v();if(tab==='bill')calc()}
 function go(t){tab=t;render();scrollTo(0,0)}
 function msg(o){return `*${db.s.shop}* — Bill #${o.no}\nCustomer: ${o.cust}\nDelivery: ${fd(o.del)}\n`+o.items.filter(i=>i.d||i.r).map(i=>`• ${i.d||'Item'} — ${i.q} ${i.u||'pcs'} × ${inr(i.r)} = ${inr((+i.q||0)*(+i.r||0))}`).join('\n')+`\nTotal: ${inr(tot(o))}${adv(o)?`\nAdvance: ${inr(adv(o))}`:''}\n*Balance: ${inr(bal(o))}*${db.s.upi&&bal(o)>0?`\nPay by UPI: ${db.s.upi}`:''}`}
 function wa(o){let p=(o.phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;open('https://wa.me/'+p+'?text='+encodeURIComponent(msg(o)))}
@@ -128,9 +133,13 @@ const a=el.dataset.a,v=el.dataset.v,id=el.dataset.id,o=db.orders.find(x=>x.id===
 if(a==='tab'){if(v!=='bill'&&editId){editId=null;draft=blank()}go(v)}
 else if(a==='settings')go('settings');
 else if(a==='ddt')dl.classList.toggle('on');
-else if(a==='pick'){draft.out=v;$('#ddb').innerHTML=outBtn();dl.classList.remove('on')}
+else if(a==='pick'){draft.out=v;$('#ddb').innerHTML=outBtn();$('#rates').outerHTML=ratesHint();$('#items').innerHTML=items();dl.classList.remove('on')}
 else if(a==='oadd'||a==='oadd2'){const n=a==='oadd2'?$('#on').value.trim():(prompt('Outsource name')||'').trim();if(!n)return;if(!db.outs.includes(n))db.outs.push(n);save();if(a==='oadd'){draft.out=n}render()}
-else if(a==='odel'){if(confirm('Remove '+v+'?')){db.outs=db.outs.filter(x=>x!==v);save();render()}}
+else if(a==='odet'){osel=v;go('odet')}
+else if(a==='oback')go('out');
+else if(a==='padd'){oe(osel).prices.push({n:'',u:'pcs',r:''});save();render()}
+else if(a==='pdel'){oe(osel).prices.splice(+el.dataset.i,1);save();render()}
+else if(a==='odel'){if(confirm('Remove '+v+'?')){db.outs=db.outs.filter(x=>x!==v);delete db.info[v];save();render()}}
 else if(a==='iadd'){draft.items.push({d:'',q:1,u:'pcs',r:''});$('#items').innerHTML=items()}
 else if(a==='idel'){draft.items.splice(+el.dataset.i,1);if(!draft.items.length)draft.items=[{d:'',q:1,u:'pcs',r:''}];$('#items').innerHTML=items();calc()}
 else if(a==='save')saveBill(false);else if(a==='savewa')saveBill(true);
@@ -149,6 +158,7 @@ else if(a==='wipe'){if(confirm('Erase everything?')){db=structuredClone(def);sav
 document.addEventListener('input',e=>{const t=e.target;
 if(t.dataset.s){db.s[t.dataset.s]=t.value;save();$('#user').textContent='👤 '+db.s.user;return}
 if(t.id==='q'){q=t.value;$('#ol').innerHTML=vOrders().match(/<div id="ol">([\s\S]*)<\/div>$/)[1];return}
+if(tab==='odet'){const o=oe(osel);if(t.dataset.o)o[t.dataset.o]=t.value;else if(t.dataset.p!=null)o.prices[t.dataset.p][t.dataset.k]=t.value;save();return}
 if(tab!=='bill')return;
 if(t.dataset.i!=null)draft.items[t.dataset.i][t.dataset.k]=t.value;
 else if(t.name){draft[t.name]=t.type==='checkbox'?t.checked:t.value;if(t.name==='advOn')$('#advBox').hidden=!t.checked;if(t.name==='date'){$('#ddl').innerHTML=outList();$('#ddb').innerHTML=outBtn()}}
