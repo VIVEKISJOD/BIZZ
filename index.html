@@ -2,19 +2,159 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Bizz</title>
 <meta name="theme-color" content="#4f46e5">
 <link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="styles.css">
+<style>
+:root{--ac:#4f46e5;--bg:#f4f5f9;--cd:#fff;--tx:#1b1e2b;--mu:#6b7085;--ln:#e3e5ee;--ok:#16a34a;--no:#dc2626}
+[data-theme=dark]{--bg:#12141c;--cd:#1c1f2b;--tx:#eceef6;--mu:#9498ad;--ln:#2b2f3f}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:var(--ac);color:#fff}
+header b{font-size:17px}.gear{background:rgba(255,255,255,.2);border:0;color:#fff;font-size:20px;width:38px;height:38px;border-radius:50%}
+main{padding:14px;max-width:640px;margin:auto}
+h2{margin:4px 0 12px;font-size:19px}h3{margin:16px 0 8px;font-size:15px;color:var(--mu);font-weight:600}
+.card{background:var(--cd);border:1px solid var(--ln);border-radius:14px;padding:12px;margin-bottom:10px}
+label{display:block;font-size:12px;color:var(--mu);margin:10px 0 4px}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--ac)}
+.row{display:flex;gap:8px;align-items:center}.row>*{flex:1}.sp{justify-content:space-between}
+.btn{border:0;border-radius:10px;padding:11px 14px;background:var(--ac);color:#fff;font:600 15px inherit;font-family:inherit;flex:1}
+.btn.g{background:transparent;color:var(--ac);border:1px solid var(--ac)}.btn.r{background:var(--no)}.btn.s{padding:7px 10px;font-size:13px;flex:none}
+.dd{position:relative}.ddb{display:flex;gap:8px;align-items:center;width:100%;text-align:left;padding:10px;border:1px solid var(--ln);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+.ddl{display:none;position:absolute;left:0;right:0;top:100%;z-index:4;background:var(--cd);border:1px solid var(--ln);border-radius:10px;margin-top:4px;max-height:240px;overflow:auto;box-shadow:0 8px 24px #0003}
+.ddl.on{display:block}.opt{display:flex;gap:8px;align-items:center;padding:11px 12px;border-bottom:1px solid var(--ln);cursor:pointer}.opt small{margin-left:auto;color:var(--mu)}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--ok);flex:none}.dot.r{background:var(--no)}
+.it{display:grid;grid-template-columns:1fr 48px 64px 64px 28px;gap:6px;margin-bottom:6px}.it input{padding:9px 6px}
+.tot{font-size:13px}.tot div{display:flex;justify-content:space-between;padding:3px 0}.tot .b{font-size:18px;font-weight:700;color:var(--ac);border-top:1px solid var(--ln);margin-top:4px;padding-top:8px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg);border:1px solid var(--ln)}.tag.ok{color:var(--ok)}.tag.no{color:var(--no)}
+.mu{color:var(--mu);font-size:13px}.empty{text-align:center;color:var(--mu);padding:30px 10px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--cd);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav button{flex:1;border:0;background:none;color:var(--mu);padding:8px 0 7px;font:11px inherit;font-family:inherit}nav button span{display:block;font-size:21px}
+nav button.on{color:var(--ac);font-weight:700}
+.chips{display:flex;gap:6px;overflow:auto;margin-bottom:10px}.chip{padding:6px 12px;border-radius:99px;border:1px solid var(--ln);background:var(--cd);color:var(--tx);white-space:nowrap;font:13px inherit;font-family:inherit}.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.sw{display:flex;gap:10px;flex-wrap:wrap}.sw button{width:38px;height:38px;border-radius:50%;border:3px solid transparent}.sw button.on{border-color:var(--tx)}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat .card{margin:0}.stat b{display:block;font-size:19px}
+#toast{position:fixed;left:50%;bottom:90px;transform:translate(-50%,20px);background:#222;color:#fff;padding:9px 16px;border-radius:99px;opacity:0;transition:.2s;z-index:9;pointer-events:none}#toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
 </head>
 <body>
-<header><h1 id="title">Orders</h1><button id="theme" aria-label="Toggle theme">🌓</button></header>
+<header><b id="user"></b><button class="gear" data-a="settings" aria-label="Settings">⚙️</button></header>
 <main id="view"></main>
 <nav id="nav"></nav>
-<div id="modal" hidden></div>
-<div id="lock" hidden></div>
 <div id="toast"></div>
-<script type="module" src="app.js"></script>
+<input type="file" id="file" accept=".json" hidden>
+<script>
+const K='bizz.v2',ACC=['#4f46e5','#0ea5e9','#16a34a','#f59e0b','#e11d48','#9333ea','#0d9488','#475569'];
+const def={s:{user:'User',shop:'My Shop',upi:'',mode:'light',ac:ACC[0]},outs:[],orders:[]};
+let db;try{db={...def,...JSON.parse(localStorage.getItem(K)||'{}')};db.s={...def.s,...db.s}}catch{db=structuredClone(def)}
+const save=()=>localStorage.setItem(K,JSON.stringify(db)),$=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const inr=n=>'₹'+(Math.round(+n||0)).toLocaleString('en-IN');
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const fd=s=>s?new Date(s+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'—';
+const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2000)};
+const sub=o=>o.items.reduce((a,i)=>a+(+i.q||0)*(+i.r||0),0),tot=o=>sub(o)-(+o.disc||0),adv=o=>o.advOn?+o.adv||0:0,bal=o=>tot(o)-adv(o);
+const blank=()=>({cust:'',phone:'',from:'',out:'',date:today(),del:'',items:[{d:'',q:1,u:'pcs',r:''}],disc:'',advOn:false,adv:'',mode:'Cash',note:'',status:'Pending'});
+let sumSel=null,tab='today',draft=blank(),editId=null,flt='Pending',q='';
+const TABS=[['today','📅','Today'],['bill','🧾','New Bill'],['orders','📦','Orders'],['out','🧑‍🔧','Outsource'],['sum','📊','Summary']];
+const used=(n,d)=>db.orders.filter(o=>o.out===n&&o.date===d&&o.id!==editId).length;
+
+function theme(){const dark=db.s.mode==='dark'||(db.s.mode==='auto'&&matchMedia('(prefers-color-scheme:dark)').matches);
+document.documentElement.dataset.theme=dark?'dark':'light';document.documentElement.style.setProperty('--ac',db.s.ac);
+document.querySelector('meta[name=theme-color]').content=db.s.ac;$('#user').textContent='👤 '+db.s.user}
+function nav(){$('#nav').innerHTML=TABS.map(([k,i,l])=>`<button data-a="tab" data-v="${k}" class="${tab===k?'on':''}"><span>${i}</span>${l}</button>`).join('')}
+
+function card(o,showDel=true){const late=o.status==='Pending'&&o.del&&o.del<today();
+return `<div class="card"><div class="row sp"><b>#${o.no} ${esc(o.cust||'No name')}</b><span class="tag ${o.status==='Delivered'?'ok':late?'no':''}">${late?'Overdue':o.status}</span></div>
+<div class="mu">Delivery ${fd(o.del)} · Given ${fd(o.date)}${o.out?' · '+esc(o.out):''}${o.from?'<br>From: '+esc(o.from):''}</div>
+<div class="row sp" style="margin-top:6px"><span>Total ${inr(tot(o))}${adv(o)?` · Adv ${inr(adv(o))}`:''}</span><b style="text-align:right">Due ${inr(bal(o))}</b></div>
+<div class="row" style="margin-top:8px"><button class="btn s ${o.status==='Delivered'?'g':''}" data-a="deliv" data-id="${o.id}">${o.status==='Delivered'?'Undo':'✓ Delivered'}</button><button class="btn s g" data-a="edit" data-id="${o.id}">Edit</button><button class="btn s g" data-a="share" data-id="${o.id}">Share</button><button class="btn s r" data-a="del" data-id="${o.id}">Delete</button></div></div>`}
+
+function outList(){const names=db.outs;return names.map(n=>{const c=used(n,draft.date);return `<div class="opt" data-a="pick" data-v="${esc(n)}"><i class="dot ${c?'r':''}"></i>${esc(n)}<small>${c?'given '+c+' today':'free'}</small></div>`}).join('')+`<div class="opt" data-a="oadd">➕ Add new outsource</div>`}
+function outBtn(){const n=draft.out;return n?`<i class="dot ${used(n,draft.date)?'r':''}"></i>${esc(n)}`:'Select outsource'}
+
+function vToday(){const t=today(),l=db.orders.filter(o=>o.status==='Pending'&&o.del&&o.del<=t).sort((a,b)=>a.del.localeCompare(b.del)),
+up=db.orders.filter(o=>o.status==='Pending'&&o.del>t).sort((a,b)=>a.del.localeCompare(b.del)).slice(0,5);
+return `<h2>Today's deliveries · ${fd(t)}</h2>${l.length?l.map(o=>card(o)).join(''):'<div class="empty">Nothing due today 🎉</div>'}${up.length?'<h3>Coming up</h3>'+up.map(o=>card(o)).join(''):''}`}
+
+function vBill(){const d=draft;return `<h2>${editId?'Edit bill':'New bill'}</h2><div class="card">
+<label>Customer name</label><input name="cust" value="${esc(d.cust)}" placeholder="Customer">
+<label>Phone</label><input name="phone" inputmode="tel" value="${esc(d.phone)}">
+<label>Business order taken from</label><input name="from" list="froms" value="${esc(d.from)}" placeholder="Shop / agent / source"><datalist id="froms">${[...new Set(db.orders.map(o=>o.from).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+<div class="row"><div><label>Order given date</label><input type="date" name="date" value="${d.date}"></div><div><label>Delivery date</label><input type="date" name="del" value="${d.del}"></div></div>
+<label>Given to outsource</label><div class="dd"><button type="button" class="ddb" id="ddb" data-a="ddt">${outBtn()}</button><div class="ddl" id="ddl">${outList()}</div></div></div>
+<div class="card"><b>Items</b><div id="items" style="margin-top:8px">${items()}</div><button class="btn g s" data-a="iadd">+ Add item</button>
+<label>Discount (₹)</label><input name="disc" type="number" inputmode="decimal" value="${d.disc}">
+<label class="row" style="margin-top:12px;color:var(--tx);font-size:15px"><input type="checkbox" name="advOn" style="flex:none;width:22px" ${d.advOn?'checked':''}><span>Advance taken</span></label>
+<div id="advBox" ${d.advOn?'':'hidden'}><label>Advance amount (₹)</label><input name="adv" type="number" inputmode="decimal" value="${d.adv}"></div>
+<label>Payment mode</label><select name="mode">${['Cash','UPI','Card','Bank'].map(m=>`<option ${m===d.mode?'selected':''}>${m}</option>`).join('')}</select>
+<label>Notes</label><textarea name="note" rows="2">${esc(d.note)}</textarea></div>
+<div class="card tot" id="tot"></div>
+<div class="row"><button class="btn" data-a="save">Save bill</button><button class="btn g" data-a="savewa">Save & share</button></div>
+<div class="row" style="margin-top:8px"><button class="btn g" data-a="clear">Clear</button></div>`}
+const items=()=>draft.items.map((i,n)=>`<div class="it"><input data-i="${n}" data-k="d" placeholder="Item" value="${esc(i.d)}"><input data-i="${n}" data-k="q" type="number" inputmode="decimal" placeholder="Qty" value="${i.q}"><select data-i="${n}" data-k="u" style="padding:9px 2px">${['pcs','kg','set'].map(u=>`<option ${u===(i.u||'pcs')?'selected':''}>${u}</option>`).join('')}</select><input data-i="${n}" data-k="r" type="number" inputmode="decimal" placeholder="Rate" value="${i.r}"><button class="btn r s" data-a="idel" data-i="${n}">×</button></div>`).join('');
+function calc(){const t=$('#tot');if(!t)return;const d=draft;t.innerHTML=`<div><span>Subtotal</span><span>${inr(sub(d))}</span></div>${+d.disc?`<div><span>Discount</span><span>− ${inr(d.disc)}</span></div>`:''}<div><span>Total</span><span>${inr(tot(d))}</span></div>${adv(d)?`<div><span>Advance taken</span><span>− ${inr(adv(d))}</span></div>`:''}<div class="b"><span>Balance to collect</span><span>${inr(bal(d))}</span></div>`}
+
+function vOrders(){let l=db.orders.slice().reverse();if(flt!=='All')l=l.filter(o=>o.status===flt);if(q)l=l.filter(o=>(o.cust+o.out+o.from+o.no).toLowerCase().includes(q.toLowerCase()));
+return `<h2>Orders</h2><input id="q" placeholder="Search customer, outsource, #" value="${esc(q)}" style="margin-bottom:10px"><div class="chips">${['Pending','Delivered','All'].map(f=>`<button class="chip ${flt===f?'on':''}" data-a="flt" data-v="${f}">${f}</button>`).join('')}</div><div id="ol">${l.length?l.map(o=>card(o)).join(''):'<div class="empty">No orders yet</div>'}</div>`}
+
+function vOut(){const t=today();return `<h2>Outsource list</h2><div class="card row"><input id="on" placeholder="Name" style="flex:2"><button class="btn" data-a="oadd2">Add</button></div>
+${db.outs.length?db.outs.map(n=>{const c=used(n,t),p=db.orders.filter(o=>o.out===n&&o.status==='Pending').length;return `<div class="card row sp"><span style="flex:3"><i class="dot ${c?'r':''}" style="display:inline-block;margin-right:8px"></i><b>${esc(n)}</b><br><span class="mu">${c?'Given '+c+' today':'Free today'} · ${p} pending</span></span><button class="btn r s" data-a="odel" data-v="${esc(n)}">Remove</button></div>`}).join(''):'<div class="empty">Add the people you give work to</div>'}`}
+
+function vSum(){const t=today(),m=t.slice(0,7),F={today:o=>o.date===t,month:o=>o.date.startsWith(m),all:o=>o.status==='Pending'},N={today:'Today',month:'This month',all:'All pending'},
+sm=f=>{const l=db.orders.filter(f);return {n:l.length,t:l.reduce((a,o)=>a+tot(o),0),a:l.reduce((a,o)=>a+adv(o),0),b:l.reduce((a,o)=>a+(o.status==='Delivered'?0:bal(o)),0)}},
+box=k=>{const s=sm(F[k]);return `<h3>${N[k]}</h3><div class="stat"><div class="card">Orders<b>${s.n}</b></div><div class="card">Billed<b>${inr(s.t)}</b></div><div class="card">Advance<b>${inr(s.a)}</b></div><div class="card" data-a="sl" data-v="${k}" style="cursor:pointer;border-color:var(--ac)">To collect ▸<b>${inr(s.b)}</b></div></div>`},
+l=sumSel?db.orders.filter(F[sumSel]).filter(o=>o.status==='Pending'&&bal(o)>0):[];
+return `<h2>Summary</h2><div class="mu">Tap "To collect" to see who owes you.</div>${box('today')}${box('month')}${box('all')}${sumSel?`<h3 id="sl">To collect · ${N[sumSel]} (${l.length})</h3>${l.length?l.map(o=>card(o)).join(''):'<div class="empty">Nothing to collect 🎉</div>'}`:''}`}
+
+function vSet(){const s=db.s;return `<h2>Settings</h2><div class="card"><label>Your name</label><input data-s="user" value="${esc(s.user)}"><label>Shop name</label><input data-s="shop" value="${esc(s.shop)}"><label>UPI ID (shown to customers)</label><input data-s="upi" value="${esc(s.upi)}" placeholder="name@bank" autocapitalize="none"></div>
+<div class="card"><b>Theme</b><div class="chips" style="margin-top:8px">${['light','dark','auto'].map(m=>`<button class="chip ${s.mode===m?'on':''}" data-a="mode" data-v="${m}">${m}</button>`).join('')}</div><b>Colour</b><div class="sw" style="margin-top:8px">${ACC.map(c=>`<button data-a="acc" data-v="${c}" class="${s.ac===c?'on':''}" style="background:${c}"></button>`).join('')}</div></div>
+<div class="card"><b>Backup</b><div class="row" style="margin-top:8px"><button class="btn g" data-a="exp">Export</button><button class="btn g" data-a="imp">Import</button></div><button class="btn r" style="width:100%;margin-top:10px" data-a="wipe">Erase all data</button></div>`}
+
+function render(){theme();nav();const v={today:vToday,bill:vBill,orders:vOrders,out:vOut,sum:vSum,settings:vSet}[tab];$('#view').innerHTML=v();if(tab==='bill')calc()}
+function go(t){tab=t;render();scrollTo(0,0)}
+function msg(o){return `*${db.s.shop}* — Bill #${o.no}\nCustomer: ${o.cust}\nDelivery: ${fd(o.del)}\n`+o.items.filter(i=>i.d||i.r).map(i=>`• ${i.d||'Item'} — ${i.q} ${i.u||'pcs'} × ${inr(i.r)} = ${inr((+i.q||0)*(+i.r||0))}`).join('\n')+`\nTotal: ${inr(tot(o))}${adv(o)?`\nAdvance: ${inr(adv(o))}`:''}\n*Balance: ${inr(bal(o))}*${db.s.upi&&bal(o)>0?`\nPay by UPI: ${db.s.upi}`:''}`}
+function wa(o){let p=(o.phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;open('https://wa.me/'+p+'?text='+encodeURIComponent(msg(o)))}
+function saveBill(share){const d=draft;if(!d.cust.trim()&&!d.items.some(i=>i.d||i.r))return toast('Add a customer or item');
+d.items=d.items.filter(i=>i.d||+i.r);if(!d.items.length)d.items=[{d:'',q:1,u:'pcs',r:0}];let o;
+if(editId){o=db.orders.find(x=>x.id===editId);Object.assign(o,d)}else{o={...d,id:Date.now().toString(36),no:db.orders.reduce((a,x)=>Math.max(a,x.no),0)+1};db.orders.push(o)}
+save();toast('Bill saved');editId=null;draft=blank();if(share)wa(o);go('orders')}
+
+document.addEventListener('click',e=>{const el=e.target.closest('[data-a]');const dl=$('#ddl');
+if(!el){if(dl&&!e.target.closest('.dd'))dl.classList.remove('on');return}
+const a=el.dataset.a,v=el.dataset.v,id=el.dataset.id,o=db.orders.find(x=>x.id===id);
+if(a==='tab'){if(v!=='bill'&&editId){editId=null;draft=blank()}go(v)}
+else if(a==='settings')go('settings');
+else if(a==='ddt')dl.classList.toggle('on');
+else if(a==='pick'){draft.out=v;$('#ddb').innerHTML=outBtn();dl.classList.remove('on')}
+else if(a==='oadd'||a==='oadd2'){const n=a==='oadd2'?$('#on').value.trim():(prompt('Outsource name')||'').trim();if(!n)return;if(!db.outs.includes(n))db.outs.push(n);save();if(a==='oadd'){draft.out=n}render()}
+else if(a==='odel'){if(confirm('Remove '+v+'?')){db.outs=db.outs.filter(x=>x!==v);save();render()}}
+else if(a==='iadd'){draft.items.push({d:'',q:1,u:'pcs',r:''});$('#items').innerHTML=items()}
+else if(a==='idel'){draft.items.splice(+el.dataset.i,1);if(!draft.items.length)draft.items=[{d:'',q:1,u:'pcs',r:''}];$('#items').innerHTML=items();calc()}
+else if(a==='save')saveBill(false);else if(a==='savewa')saveBill(true);
+else if(a==='clear'){draft=blank();editId=null;render()}
+else if(a==='deliv'){o.status=o.status==='Delivered'?'Pending':'Delivered';save();render()}
+else if(a==='edit'){editId=id;draft=structuredClone(o);go('bill')}
+else if(a==='share')wa(o);
+else if(a==='del'){if(confirm('Delete bill #'+o.no+'?')){db.orders=db.orders.filter(x=>x.id!==id);save();render()}}
+else if(a==='sl'){sumSel=v;render();$('#sl').scrollIntoView({behavior:'smooth'})}
+else if(a==='flt'){flt=v;render()}
+else if(a==='mode'){db.s.mode=v;save();render()}else if(a==='acc'){db.s.ac=v;save();render()}
+else if(a==='exp'){const b=new Blob([JSON.stringify(db)],{type:'application/json'}),l=document.createElement('a');l.href=URL.createObjectURL(b);l.download='bizz-backup-'+today()+'.json';l.click()}
+else if(a==='imp')$('#file').click();
+else if(a==='wipe'){if(confirm('Erase everything?')){db=structuredClone(def);save();go('today')}}});
+
+document.addEventListener('input',e=>{const t=e.target;
+if(t.dataset.s){db.s[t.dataset.s]=t.value;save();$('#user').textContent='👤 '+db.s.user;return}
+if(t.id==='q'){q=t.value;$('#ol').innerHTML=vOrders().match(/<div id="ol">([\s\S]*)<\/div>$/)[1];return}
+if(tab!=='bill')return;
+if(t.dataset.i!=null)draft.items[t.dataset.i][t.dataset.k]=t.value;
+else if(t.name){draft[t.name]=t.type==='checkbox'?t.checked:t.value;if(t.name==='advOn')$('#advBox').hidden=!t.checked;if(t.name==='date'){$('#ddl').innerHTML=outList();$('#ddb').innerHTML=outBtn()}}
+calc()});
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(x=>{try{const j=JSON.parse(x);db={...def,...j};db.s={...def.s,...j.s};save();go('today');toast('Imported')}catch{toast('Invalid file')}})};
+render();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
 </body>
 </html>
